@@ -1,24 +1,20 @@
 import time
-
-from selenium import webdriver
+import configparser
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
-
 from plans_dict import plans_dict
 from validations import *
+from driver import init_driver
 
-# set the driver
-chrome_options = webdriver.ChromeOptions()
-chrome_options.add_experimental_option("detach", True)
-# chrome_options.add_argument('--headless')  # Enable headless mode
-chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-chrome_options.add_argument("accept-language=en-US;q=0.8,en;q=0.7")
-driver = webdriver.Chrome(options=chrome_options)
-driver.maximize_window()
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+
+driver = init_driver()
 
 driver.get("https://www.apextraderfunding.com/member/member/")
 print("----------------------------------------")
@@ -27,10 +23,15 @@ time.sleep(2)
 
 auth_success = False
 while not auth_success:
-    username = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "amember-login")))
-    password = driver.find_element(By.ID, "amember-pass")
-    username.send_keys(input("enter username/email: "))
-    password.send_keys(input("enter password: "))
+    username_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "amember-login")))
+    password_field = driver.find_element(By.ID, "amember-pass")
+    # username = input("enter username/email: ")
+    # password = input("enter password: ")
+    user_details = config["User"]
+    username = user_details["username"]
+    password = user_details["password"]
+    username_field.send_keys(username)
+    password_field.send_keys(password)
 
     driver.find_element(By.CSS_SELECTOR, "input[type='submit']").click()
     time.sleep(2)
@@ -75,19 +76,16 @@ print("----------------------------------------------------------")
 print("now you'll need to fill your billing details one time for the purchases, we do note save them, "
       "they will delete after the script will finish running")
 
-# testing values
-# first_name = "h"
-# last_name = "h"
-# credit_card_month = "12"
-# credit_card_year = "2024"
-# credit_card_number = "375510390001191"
-# cvv_number = "222"
 
-# collectiog values
-cc_values = get_cc_details()
+# testing values
+cc_values = config["CreditCard"]
+
+# collecting values
+# cc_values = get_cc_details()
 
 accounts_number = int(input("How many accounts would you like to purchase? "))
 accounts_counter = 0
+
 while accounts_counter < accounts_number:
     print(f"Purchasing account number {accounts_counter + 1}")
     driver.get(selected_plan["plan_link"])
@@ -109,26 +107,25 @@ while accounts_counter < accounts_number:
     print("-----------------------------------")
     print("moving to filling your credit card details")
 
-
     # fill the cc derails
-    cc_name_f = driver.find_element(By.ID, "cc_name_f")
-    driver.execute_script("arguments[0].value = arguments[1]", cc_name_f, cc_values["first_name"])
-    time.sleep(0.1)
-    cc_name_l = driver.find_element(By.ID, "cc_name_l")
-    driver.execute_script("arguments[0].value = arguments[1]", cc_name_l, cc_values["last_name"])
-    time.sleep(0.1)
+    # cc_name_f = driver.find_element(By.ID, "cc_name_f")
+    # driver.execute_script("arguments[0].value = arguments[1]", cc_name_f, cc_values["first_name"])
+    # time.sleep(0.1)
+    # cc_name_l = driver.find_element(By.ID, "cc_name_l")
+    # driver.execute_script("arguments[0].value = arguments[1]", cc_name_l, cc_values["last_name"])
+    # time.sleep(0.1)
     cc_number = driver.find_element(By.ID, "cc_number")
-    driver.execute_script("arguments[0].value = arguments[1]", cc_number, cc_values["credit_card_number"])
+    driver.execute_script("arguments[0].value = arguments[1]", cc_number, cc_values["number"])
     time.sleep(0.1)
     select_month_elem = driver.find_element(By.NAME, "cc_expire[m]")
     select_month_obj = Select(select_month_elem)
-    select_month_obj.select_by_value(cc_values["credit_card_month"])
+    select_month_obj.select_by_value(cc_values["month"])
     time.sleep(0.1)
     select_year_elem = driver.find_element(By.NAME, "cc_expire[y]")
     select_year_obj = Select(select_year_elem)
-    select_year_obj.select_by_value(cc_values["credit_card_year"])
+    select_year_obj.select_by_value(cc_values["year"])
     time.sleep(0.1)
-    driver.find_element(By.ID, "cc_code").send_keys(cc_values["cvv_number"])
+    driver.find_element(By.ID, "cc_code").send_keys(cc_values["cvv"])
     total_price = driver.find_element(By.CSS_SELECTOR, "tr.am-receipt-row-total .am-receipt-price strong")
     print("----------------------------------------------")
     print(f"finished to fill credit card details")
@@ -136,23 +133,33 @@ while accounts_counter < accounts_number:
     confirmation = input("Type Y to confirm: ").strip().lower()
 
     if confirmation == "y":
-        pay_btn = driver.find_element(By.CSS_SELECTOR, "input[type='submit'][value='Subscribe And Pay']")
+        pay_btn = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
         driver.execute_script("arguments[0].scrollIntoView();", pay_btn)
         time.sleep(1)
-        pay_btn.click()
+        driver.execute_script("arguments[0].click();", pay_btn)
         try:
             time.sleep(2)
             success_div = driver.find_element(By.CLASS_NAME, "am-thanks-status-success")
             print(success_div.text)
+            accounts_counter += 1  # Increment counter on successful purchase
+            print(f"Successfully purchased account {accounts_counter} of {accounts_number}")
         except NoSuchElementException:
             print("Payment Failed")
             print("--------------------------------------")
-            print("let's go through the details again...")
+            print("Let's go through the details again...")
             cc_values = get_cc_details()
-            accounts_counter -= 1
+            # Don't increment counter here, as the purchase failed
     else:
-        print("You didn't confirm, existing...")
+        print("You didn't confirm, exiting...")
         break
+
+    if accounts_counter < accounts_number:
+        continue_purchase = input("Do you want to continue purchasing? (Y/N): ").strip().lower()
+        if continue_purchase != 'y':
+            print("Exiting purchase process...")
+            break
+
+print(f"Total accounts purchased: {accounts_counter}")
 
 time.sleep(3)
 driver.close()
