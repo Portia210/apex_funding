@@ -40,10 +40,10 @@ def number_with_length_validation(input_text, optional_length_list):
 
 
 def get_cc_details():
-    first_name = string_or_space_validation("Enter your first name: ")
-    print("---------------------------------------")
-    last_name = string_or_space_validation("Enter your last name: ")
-    print("---------------------------------------")
+    # first_name = string_or_space_validation("Enter your first name: ")
+    # print("---------------------------------------")
+    # last_name = string_or_space_validation("Enter your last name: ")
+    # print("---------------------------------------")
     print("credit card month ")
     credit_card_month = month_year_validation("number between 1 to 12: ", list(range(1, 13)))
     print("---------------------------------------")
@@ -58,10 +58,10 @@ def get_cc_details():
     print("---------------------------------------")
 
     return {
-        "first_name": first_name,
-        "last_name": last_name,
-        "credit_card_month": credit_card_month,
-        "credit_card_year": credit_card_year,
-        "credit_card_number": credit_card_number,
-        "cvv_number": cvv_number
+        # "first_name": first_name,
+        # "last_name": last_name,
+        "month": credit_card_month,
+        "year": credit_card_year,
+        "number": credit_card_number,
+        "cvv": cvv_number
     }

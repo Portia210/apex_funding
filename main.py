@@ -14,7 +14,7 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 
-driver = init_driver()
+driver = init_driver(headless=False)
 
 driver.get("https://www.apextraderfunding.com/member/member/")
 print("----------------------------------------")
@@ -37,13 +37,8 @@ while not auth_success:
     time.sleep(2)
     try:
         element_after_login = driver.find_element(By.ID, "widget-member-main-subscriptions")
-
-        # Check if the element is present, indicating successful authentication
-        if element_after_login.is_displayed():
-            print("Authentication successful!")
-            break
-        else:
-            print("Element isn't display")
+        print("Login Completed")
+        break
     except NoSuchElementException:
         print("Authentication have failed.")
 
@@ -136,19 +131,25 @@ while accounts_counter < accounts_number:
         pay_btn = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
         driver.execute_script("arguments[0].scrollIntoView();", pay_btn)
         time.sleep(1)
+
+        current_url = driver.current_url
         driver.execute_script("arguments[0].click();", pay_btn)
-        try:
-            time.sleep(2)
-            success_div = driver.find_element(By.CLASS_NAME, "am-thanks-status-success")
-            print(success_div.text)
-            accounts_counter += 1  # Increment counter on successful purchase
+        time.sleep(5)
+
+        # Check if the new URL contains the success path
+        if "https://apextraderfunding.com/member/thanks" in driver.current_url:
+            print("Payment successful")
+            accounts_counter += 1
             print(f"Successfully purchased account {accounts_counter} of {accounts_number}")
-        except NoSuchElementException:
-            print("Payment Failed")
+        elif driver.current_url == current_url:
+            print("Payment failed")
             print("--------------------------------------")
             print("Let's go through the details again...")
             cc_values = get_cc_details()
-            # Don't increment counter here, as the purchase failed
+        else:
+            print("Payment status unclear - URL changed but not to the expected success page")
+            print("Current URL:", driver.current_url)
+            print("Please check manually and update the accounts_counter if needed")
     else:
         print("You didn't confirm, exiting...")
         break
